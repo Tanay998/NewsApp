@@ -1,8 +1,7 @@
-import React, { Component } from 'react';
-import NewsItem from './NewsItem';
-
-export default class News extends Component {
-  articles =[
+{
+    "status": "ok",
+    "totalResults": 3,
+    "articles": [
         {
             "source": {
                 "id": "bbc-sport",
@@ -43,33 +42,4 @@ export default class News extends Component {
             "content": "Last week, we at ESPNcricinfo did something we have been thinking of doing for eight years now: pretend-live ball-by-ball commentary for a classic cricket match. We knew the result, yes, but we tried… [+6823 chars]"
         }
     ]
-  constructor(){
-    super();
-    console.log("Hello I am constructor from News Component");
-    this.state = {
-      articles: this.articles,
-      loading:false
-    }
-    
-  }
-  render() {
-    return (
-      <>
-        <div className="container my-3">
-          <h2>News Ninja - Top News</h2>
-          <div className="row">
-            <div className="col-md-4">
-              <NewsItem title = "myTitle" description = "desc" imageUrl = "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/2d40/live/4e831bd0-446b-11f0-b6e6-4ddb91039da1.jpg" newsUrl = "Todo" />
-            </div>
-            <div className="col-md-4">
-              <NewsItem title = "myTitle" description = "desc" />
-            </div>
-            <div className="col-md-4">
-              <NewsItem title = "myTitle" description = "desc" />
-            </div>
-          </div>
-        </div>
-      </>
-    )
-  }
 }
