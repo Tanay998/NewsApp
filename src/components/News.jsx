@@ -2,16 +2,6 @@ import React, { Component } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 
-const categories = [
-  'business',
-  'entertainment',
-  'general',
-  'health',
-  'science',
-  'sports',
-  'technology'
-];
-
 export default class News extends Component {
   constructor(props) {
     super(props);
@@ -19,10 +9,9 @@ export default class News extends Component {
       articles: [],
       loading: false,
       page: 1,
-      totalResults: 0,
-      selectedCategory: this.props.category || 'general'
-    }
-    document.title = `${this.capitalizeFirstLetter(this.state.selectedCategory)} - NewsApp`;
+      totalResults: 0
+    };
+    document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsApp`;
   }
 
   capitalizeFirstLetter = (string) => {
@@ -35,13 +24,12 @@ export default class News extends Component {
 
   async fetchNews() {
     this.setState({ loading: true });
-    let url = `https://newsapi.org/v2/everything?q=${this.state.selectedCategory}&apiKey=d6484692fff743309c2420e629dff1b6&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+    let url = `https://newsapi.org/v2/everything?q=${this.props.category}&apiKey=d6484692fff743309c2420e629dff1b6&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     
     try {
       let data = await fetch(url);
       let parsedData = await data.json();
       
-      // Filter out articles without titles
       const filteredArticles = parsedData.articles.filter(article => article.title);
       
       this.setState({
@@ -58,108 +46,64 @@ export default class News extends Component {
     }
   }
 
-  handleCategoryChange = async (category) => {
-    await this.setState({ 
-      selectedCategory: category,
-      page: 1,
-      articles: []
-    });
-    document.title = `${this.capitalizeFirstLetter(category)} - NewsApp`;
-    this.fetchNews();
-  }
-
   handlePreviousClick = async () => {
-    if (this.state.page > 1) {
-      this.setState({ page: this.state.page - 1 }, () => {
-        this.fetchNews();
-        window.scrollTo(0, 0);
-      });
-    }
+    this.setState({ page: this.state.page - 1 }, () => {
+      this.fetchNews();
+      window.scrollTo(0, 0);
+    });
   }
 
   handleNextClick = async () => {
-    const { page, totalResults } = this.state;
-    const maxPages = Math.ceil(totalResults / this.props.pageSize);
-    
-    if (page < maxPages) {
-      this.setState({ page: this.state.page + 1 }, () => {
-        this.fetchNews();
-        window.scrollTo(0, 0);
-      });
-    }
+    this.setState({ page: this.state.page + 1 }, () => {
+      this.fetchNews();
+      window.scrollTo(0, 0);
+    });
   }
 
   render() {
-    const { articles, page, totalResults, loading, selectedCategory } = this.state;
+    const { articles, page, totalResults, loading } = this.state;
     const totalPages = Math.ceil(totalResults / this.props.pageSize);
 
     return (
-      <>
-        <div className="container my-3">
-          <h2 className="text-center">NewsApp - {this.capitalizeFirstLetter(selectedCategory)} News</h2>
-          
-          {/* Category Buttons */}
-          <div className="d-flex flex-wrap justify-content-center my-4">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className={`btn mx-2 my-1 ${selectedCategory === category ? 'btn-dark' : 'btn-outline-dark'}`}
-                onClick={() => this.handleCategoryChange(category)}
-              >
-                {this.capitalizeFirstLetter(category)}
-              </button>
-            ))}
+      <div className="container my-3">
+        <h2 className="text-center">NewsApp - {this.capitalizeFirstLetter(this.props.category)} News</h2>
+        
+        {loading && <Spinner />}
+
+        {!loading && articles.length === 0 && (
+          <div className="alert alert-warning text-center">
+            No news articles found. Please try another category.
           </div>
+        )}
 
-          {loading && <Spinner />}
-
-          {!loading && articles.length === 0 && (
-            <div className="alert alert-warning text-center">
-              No news articles found for this category. Please try another category.
+        <div className="row row-cols-1 row-cols-md-3 g-4 mt-4">
+          {!loading && articles.map((element) => (
+            <div className="col" key={element.url}>
+              <NewsItem {...element} />
             </div>
-          )}
-
-          <div className="row row-cols-1 row-cols-md-3 g-4 mt-4">
-            {!loading && articles.map((element) => {
-              return (
-                <div className="col" key={element.url}>
-                  <NewsItem
-                    title={element.title ? element.title.slice(0, 45) : ""}
-                    description={element.description ? element.description.slice(0, 85) : ""}
-                    imageUrl={element.urlToImage}
-                    newsUrl={element.url}
-                    author={element.author}
-                    date={element.publishedAt}
-                    source={element.source?.name}
-                  />
-                </div>
-              )
-            })}
-          </div>
-
-          {!loading && articles.length > 0 && (
-            <div className="container d-flex justify-content-between mt-4">
-              <button 
-                type='button' 
-                disabled={page <= 1 || loading} 
-                className='btn btn-primary' 
-                onClick={this.handlePreviousClick}
-              >
-                Previous &larr;
-              </button>
-              <span className="mx-2 my-auto">Page {page} of {totalPages}</span>
-              <button 
-                type='button' 
-                className='btn btn-success' 
-                onClick={this.handleNextClick}
-                disabled={page >= totalPages || loading}
-              >
-                &rarr; Next
-              </button>
-            </div>
-          )}
+          ))}
         </div>
-      </>
-    )
+
+        {!loading && articles.length > 0 && (
+          <div className="container d-flex justify-content-between mt-4">
+            <button 
+              disabled={page <= 1} 
+              className="btn btn-primary"
+              onClick={this.handlePreviousClick}
+            >
+              Previous
+            </button>
+            <span className="mx-2 my-auto">Page {page} of {totalPages}</span>
+            <button 
+              disabled={page >= totalPages}
+              className="btn btn-success"
+              onClick={this.handleNextClick}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 }
