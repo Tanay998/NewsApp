@@ -8,7 +8,7 @@ export class NewsItem extends Component {
       url, 
       author, 
       publishedAt, 
-      source 
+      source
     } = this.props;
     
     const defaultImage = "https://image.cnbcfm.com/api/v1/image/108133398-1744901282932-gettyimages-2210727739-anotherday18620636_mw2vfms2.jpeg?v=1749418062&w=1920&h=1080";
