@@ -68,7 +68,7 @@ export default class News extends Component {
       <div className="container my-3">
         <h2 className="text-center">NewsApp - {this.capitalizeFirstLetter(this.props.category)} News</h2>
         
-        {loading && <Spinner />}
+        {/* {loading && <Spinner />} */}
 
         {!loading && articles.length === 0 && (
           <div className="alert alert-warning text-center">
