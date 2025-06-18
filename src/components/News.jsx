@@ -1,140 +1,128 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 
-let lastScrollTop  = 0;
-export default class News extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      articles: [],
-      loading: false,
-      page: 1,
-      totalResults: 0,
-      hasMore: true
-    };
-    document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsApp`;
-  }
-  
+const News = ({ category, pageSize, setProgress, isInitial }) => {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const lastScrollTopRef = useRef(0);
 
-  capitalizeFirstLetter = (string) => {
+  const capitalizeFirstLetter = useCallback((string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
-  }
+  }, []);
 
-  getArticleKey = (article) => {
+  const getArticleKey = useCallback((article) => {
     return `${article.url}-${article.publishedAt}-${Math.random().toString(36).substr(2, 9)}`;
-  }
+  }, []);
 
-  async componentDidMount() {
-    this.fetchNews();
-    window.addEventListener('scroll', this.handleScroll);
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('scroll', this.handleScroll);
-    lastScrollTop = 0;
-  }
-
-  handleScroll = () => {
-    const { loading, hasMore } = this.state;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const isScrollingDown = scrollTop > lastScrollTop;
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-    if (
-      isScrollingDown &&
-      !loading && 
-      hasMore &&
-      window.innerHeight + scrollTop + 500 >= document.documentElement.offsetHeight
-    ) {
-      this.loadMoreNews();
+  const fetchNews = useCallback(async () => {
+    const showProgress = !isInitial || page > 1;
+    if (showProgress) {
+      setProgress(10);
     }
-  };
-
-  loadMoreNews = () => {
-    this.setState(
-      prevState => ({ page: prevState.page + 1 }), 
-      () => this.fetchNews()
-    );
-  };
-
-  async fetchNews() {
-    const apiUrl = import.meta.env.VITE_NEWS_API_URL;
-    const apiKey = import.meta.env.VITE_NEWS_API_KEY;
-    const showProgress = !this.props.isInitial || this.state.page>1;
-    if(showProgress){
-      this.props.setProgress(10); // Start loading bar
-    }
-    this.setState({ loading: true });
     
-    let url = `${apiUrl}/everything?q=${this.props.category}&apiKey=${apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+    setLoading(true);
+    
+    const apiKey = import.meta.env.VITE_NEWS_API_KEY;
+    const apiUrl = import.meta.env.VITE_NEWS_API_URL;
+    const url = `${apiUrl}/everything?q=${category}&apiKey=${apiKey}&page=${page}&pageSize=${pageSize}`;
     
     try {
-      let data = await fetch(url);
-      console.log(data);
-      if(showProgress) this.props.setProgress(50); // Progress after fetch
-      let parsedData = await data.json();
-      if(showProgress) this.props.setProgress(70); // Progress after parsing
+      const data = await fetch(url);
+      if (showProgress) setProgress(50);
+      
+      const parsedData = await data.json();
+      if (showProgress) setProgress(70);
       
       const filteredArticles = parsedData.articles.filter(article => 
         article.title && article.description
       );
       
-      const hasMore = this.state.page * this.props.pageSize < parsedData.totalResults;
-
-      this.setState(prevState => ({
-        articles: [...prevState.articles, ...filteredArticles],
-        totalResults: parsedData.totalResults,
-        loading: false,
-        hasMore
-      }));
-      if(showProgress) this.props.setProgress(100); // Complete loading bar
+      // Calculate hasMore directly without storing totalResults
+      const hasMoreData = page * pageSize < parsedData.totalResults;
+      setHasMore(hasMoreData);
+      
+      setArticles(prevArticles => 
+        page === 1 ? filteredArticles : [...prevArticles, ...filteredArticles]
+      );
+      
+      if (showProgress) setProgress(100);
     } catch (error) {
       console.error("Error fetching news:", error);
-      this.setState({ 
-        loading: false,
-        hasMore: false
-      });
-      // this.props.setProgress(100); // Complete even on error
+      setHasMore(false);
+      if (showProgress) setProgress(100);
     }
-  }
+    setLoading(false);
+  }, [category, page, pageSize, setProgress, isInitial]);
 
-  render() {
-    const { articles, loading, hasMore } = this.state;
+  useEffect(() => {
+    document.title = `${capitalizeFirstLetter(category)} - NewsApp`;
+  }, [category, capitalizeFirstLetter]);
 
-    return (
-      <div className="container my-3">
-        <h2 className="text-center">NewsApp - {this.capitalizeFirstLetter(this.props.category)} News</h2>
-        
-        {loading && this.state.page === 1 && <Spinner />}
+  useEffect(() => {
+    fetchNews();
+  }, [fetchNews]);
 
-        {!loading && articles.length === 0 && (
-          <div className="alert alert-warning text-center">
-            No news articles found. Please try another category.
-          </div>
-        )}
+  const handleScroll = useCallback(() => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const isScrollingDown = scrollTop > lastScrollTopRef.current;
+    lastScrollTopRef.current = scrollTop <= 0 ? 0 : scrollTop;
 
-        <div className="row row-cols-1 row-cols-md-3 g-4 mt-4">
-          {articles.map((element) => (
-            <div className="col" key={this.getArticleKey(element)}>
-              <NewsItem {...element} />
-            </div>
-          ))}
+    if (
+      isScrollingDown && 
+      !loading && 
+      hasMore &&
+      window.innerHeight + scrollTop + 500 >= document.documentElement.offsetHeight
+    ) {
+      setPage(prevPage => prevPage + 1);
+    }
+  }, [loading, hasMore]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      lastScrollTopRef.current = 0;
+    };
+  }, [handleScroll]);
+
+  return (
+    <div className="container my-3">
+      <h2 className="text-center">NewsApp - {capitalizeFirstLetter(category)} News</h2>
+      
+      {loading && page === 1 && <Spinner />}
+
+      {!loading && articles.length === 0 && (
+        <div className="alert alert-warning text-center">
+          No news articles found. Please try another category.
         </div>
+      )}
 
-        {loading && this.state.page > 1 && (
-          <div className="d-flex justify-content-center my-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      <div className="row row-cols-1 row-cols-md-3 g-4 mt-4">
+        {articles.map((element) => (
+          <div className="col" key={getArticleKey(element)}>
+            <NewsItem {...element} />
           </div>
-        )}
-
-        {!loading && !hasMore && articles.length > 0 && (
-          <p className="text-center mt-4">
-            You've reached the end of the news feed
-          </p>
-        )}
+        ))}
       </div>
-    );
-  }
-}
+
+      {loading && page > 1 && (
+        <div className="d-flex justify-content-center my-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
+
+      {!loading && !hasMore && articles.length > 0 && (
+        <p className="text-center mt-4">
+          You've reached the end of the news feed
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default News;

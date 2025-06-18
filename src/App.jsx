@@ -1,4 +1,4 @@
-import React, { Component, createRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import './App.css';
 import Navbar from './components/Navbar';
 import News from './components/News';
@@ -14,50 +14,45 @@ const categories = [
   'technology'
 ];
 
-export default class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      selectedCategory: 'general',
-      isInitial:true
-    };
-    this.loadingBarRef = createRef();
-  }
+const App = () => {
+  const [selectedCategory, setSelectedCategory] = useState('general');
+  const [isInitial, setIsInitial] = useState(true);
+  const loadingBarRef = useRef(null);
 
-  handleCategoryChange = (category) => {
-    this.setState({ 
-      selectedCategory: category,
-      isInitial:false
-     });
-  }
+  const handleCategoryChange = useCallback((category) => {
+    setSelectedCategory(category);
+    setIsInitial(false);
+  }, []);
 
-  setProgress = (progress) => {
-    this.loadingBarRef.current.complete(progress);
-  }
+  const setProgress = useCallback((progress) => {
+    if (loadingBarRef.current) {
+      loadingBarRef.current.complete(progress);
+    }
+  }, []);
 
-  render() {
-    return (
-      <>
-        <LoadingBar 
-          color="#f11946" 
-          ref={this.loadingBarRef} 
-          height={8}
-          shadow={true}
-          onLoaderFinished={() => this.loadingBarRef.current.complete(0)}
-        />
-        <Navbar 
-          categories={categories}
-          selectedCategory={this.state.selectedCategory}
-          handleCategoryChange={this.handleCategoryChange}
-        />
-        <News 
-          key={this.state.selectedCategory}
-          pageSize={9} 
-          category={this.state.selectedCategory}
-          setProgress={this.setProgress}
-          isInitial = {this.state.isInitial}
-        />
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <LoadingBar 
+        color="#f11946" 
+        ref={loadingBarRef} 
+        height={8}
+        shadow={true}
+        onLoaderFinished={() => loadingBarRef.current?.complete(0)}
+      />
+      <Navbar 
+        categories={categories}
+        selectedCategory={selectedCategory}
+        handleCategoryChange={handleCategoryChange}
+      />
+      <News 
+        key={selectedCategory}
+        pageSize={9} 
+        category={selectedCategory}
+        setProgress={setProgress}
+        isInitial={isInitial}
+      />
+    </>
+  );
+};
+
+export default App;
