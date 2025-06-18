@@ -18,13 +18,17 @@ export default class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedCategory: 'general'
+      selectedCategory: 'general',
+      isInitial:true
     };
     this.loadingBarRef = createRef();
   }
 
   handleCategoryChange = (category) => {
-    this.setState({ selectedCategory: category });
+    this.setState({ 
+      selectedCategory: category,
+      isInitial:false
+     });
   }
 
   setProgress = (progress) => {
@@ -37,7 +41,7 @@ export default class App extends Component {
         <LoadingBar 
           color="#f11946" 
           ref={this.loadingBarRef} 
-          height={4}
+          height={8}
           shadow={true}
           onLoaderFinished={() => this.loadingBarRef.current.complete(0)}
         />
@@ -51,6 +55,7 @@ export default class App extends Component {
           pageSize={9} 
           category={this.state.selectedCategory}
           setProgress={this.setProgress}
+          isInitial = {this.state.isInitial}
         />
       </>
     );

@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 
+let lastScrollTop  = 0;
 export default class News extends Component {
   constructor(props) {
     super(props);
@@ -14,6 +15,7 @@ export default class News extends Component {
     };
     document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsApp`;
   }
+  
 
   capitalizeFirstLetter = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -30,15 +32,19 @@ export default class News extends Component {
 
   componentWillUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    lastScrollTop = 0;
   }
 
   handleScroll = () => {
     const { loading, hasMore } = this.state;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const isScrollingDown = scrollTop > lastScrollTop;
+    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
     if (
+      isScrollingDown &&
       !loading && 
       hasMore &&
-      window.innerHeight + document.documentElement.scrollTop + 500 >= 
-      document.documentElement.offsetHeight
+      window.innerHeight + scrollTop + 500 >= document.documentElement.offsetHeight
     ) {
       this.loadMoreNews();
     }
@@ -52,17 +58,19 @@ export default class News extends Component {
   };
 
   async fetchNews() {
-    this.props.setProgress(10); // Start loading bar
+    const showProgress = !this.props.isInitial || this.state.page>1;
+    if(showProgress){
+      this.props.setProgress(10); // Start loading bar
+    }
     this.setState({ loading: true });
     
     let url = `https://newsapi.org/v2/everything?q=${this.props.category}&apiKey=d6484692fff743309c2420e629dff1b6&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     
     try {
-      this.props.setProgress(30); // Progress after URL setup
       let data = await fetch(url);
-      this.props.setProgress(50); // Progress after fetch
+      if(showProgress) this.props.setProgress(50); // Progress after fetch
       let parsedData = await data.json();
-      this.props.setProgress(70); // Progress after parsing
+      if(showProgress) this.props.setProgress(70); // Progress after parsing
       
       const filteredArticles = parsedData.articles.filter(article => 
         article.title && article.description
@@ -76,14 +84,14 @@ export default class News extends Component {
         loading: false,
         hasMore
       }));
-      this.props.setProgress(100); // Complete loading bar
+      if(showProgress) this.props.setProgress(100); // Complete loading bar
     } catch (error) {
       console.error("Error fetching news:", error);
       this.setState({ 
         loading: false,
         hasMore: false
       });
-      this.props.setProgress(100); // Complete even on error
+      // this.props.setProgress(100); // Complete even on error
     }
   }
 

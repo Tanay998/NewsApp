@@ -10,7 +10,7 @@ export class Navbar extends Component {
 
     return (
       <>
-        <nav className="navbar navbar-expand-lg bg-danger navbar-dark py-0" style={{ minHeight: '80px' }}>
+        <nav className="navbar navbar-expand-lg bg-info navbar-dark py-0" style={{ minHeight: '80px' }}>
           <div className="container-fluid">
             <span className="navbar-brand fw-bold fs-4">NewsApp</span>
             <button 
