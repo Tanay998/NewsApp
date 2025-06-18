@@ -9,7 +9,8 @@ export default class News extends Component {
       articles: [],
       loading: false,
       page: 1,
-      totalResults: 0
+      totalResults: 0,
+      hasMore: true
     };
     document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsApp`;
   }
@@ -18,57 +19,82 @@ export default class News extends Component {
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
-  async componentDidMount() {
-    this.fetchNews();
+  getArticleKey = (article) => {
+    return `${article.url}-${article.publishedAt}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  async componentDidMount() {
+    this.fetchNews();
+    window.addEventListener('scroll', this.handleScroll);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.handleScroll);
+  }
+
+  handleScroll = () => {
+    const { loading, hasMore } = this.state;
+    if (
+      !loading && 
+      hasMore &&
+      window.innerHeight + document.documentElement.scrollTop + 500 >= 
+      document.documentElement.offsetHeight
+    ) {
+      this.loadMoreNews();
+    }
+  };
+
+  loadMoreNews = () => {
+    this.setState(
+      prevState => ({ page: prevState.page + 1 }), 
+      () => this.fetchNews()
+    );
+  };
+
   async fetchNews() {
+    this.props.setProgress(10); // Start loading bar
     this.setState({ loading: true });
+    
     let url = `https://newsapi.org/v2/everything?q=${this.props.category}&apiKey=d6484692fff743309c2420e629dff1b6&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     
     try {
+      this.props.setProgress(30); // Progress after URL setup
       let data = await fetch(url);
+      this.props.setProgress(50); // Progress after fetch
       let parsedData = await data.json();
+      this.props.setProgress(70); // Progress after parsing
       
-      const filteredArticles = parsedData.articles.filter(article => article.title);
+      const filteredArticles = parsedData.articles.filter(article => 
+        article.title && article.description
+      );
       
-      this.setState({
-        articles: filteredArticles,
+      const hasMore = this.state.page * this.props.pageSize < parsedData.totalResults;
+
+      this.setState(prevState => ({
+        articles: [...prevState.articles, ...filteredArticles],
         totalResults: parsedData.totalResults,
-        loading: false
-      });
+        loading: false,
+        hasMore
+      }));
+      this.props.setProgress(100); // Complete loading bar
     } catch (error) {
       console.error("Error fetching news:", error);
       this.setState({ 
-        articles: [],
-        loading: false 
+        loading: false,
+        hasMore: false
       });
+      this.props.setProgress(100); // Complete even on error
     }
   }
 
-  handlePreviousClick = async () => {
-    this.setState({ page: this.state.page - 1 }, () => {
-      this.fetchNews();
-      window.scrollTo(0, 0);
-    });
-  }
-
-  handleNextClick = async () => {
-    this.setState({ page: this.state.page + 1 }, () => {
-      this.fetchNews();
-      window.scrollTo(0, 0);
-    });
-  }
-
   render() {
-    const { articles, page, totalResults, loading } = this.state;
-    const totalPages = Math.ceil(totalResults / this.props.pageSize);
+    const { articles, loading, hasMore } = this.state;
 
     return (
       <div className="container my-3">
         <h2 className="text-center">NewsApp - {this.capitalizeFirstLetter(this.props.category)} News</h2>
         
-        {/* {loading && <Spinner />} */}
+        {loading && this.state.page === 1 && <Spinner />}
 
         {!loading && articles.length === 0 && (
           <div className="alert alert-warning text-center">
@@ -77,31 +103,25 @@ export default class News extends Component {
         )}
 
         <div className="row row-cols-1 row-cols-md-3 g-4 mt-4">
-          {!loading && articles.map((element) => (
-            <div className="col" key={element.url}>
+          {articles.map((element) => (
+            <div className="col" key={this.getArticleKey(element)}>
               <NewsItem {...element} />
             </div>
           ))}
         </div>
 
-        {!loading && articles.length > 0 && (
-          <div className="container d-flex justify-content-between mt-4">
-            <button 
-              disabled={page <= 1} 
-              className="btn btn-primary"
-              onClick={this.handlePreviousClick}
-            >
-              Previous
-            </button>
-            <span className="mx-2 my-auto">Page {page} of {totalPages}</span>
-            <button 
-              disabled={page >= totalPages}
-              className="btn btn-success"
-              onClick={this.handleNextClick}
-            >
-              Next
-            </button>
+        {loading && this.state.page > 1 && (
+          <div className="d-flex justify-content-center my-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
           </div>
+        )}
+
+        {!loading && !hasMore && articles.length > 0 && (
+          <p className="text-center mt-4">
+            You've reached the end of the news feed
+          </p>
         )}
       </div>
     );

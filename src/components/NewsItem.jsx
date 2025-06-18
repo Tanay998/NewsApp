@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
+
 export class NewsItem extends Component {
   render() {
     const { 
-      title = "", 
-      description = "", 
+      title, 
+      description, 
       urlToImage, 
       url, 
       author, 
@@ -11,6 +12,9 @@ export class NewsItem extends Component {
       source
     } = this.props;
     
+    // Safe handling of null values
+    const safeTitle = title || "";
+    const safeDescription = description || "";
     const defaultImage = "https://image.cnbcfm.com/api/v1/image/108133398-1744901282932-gettyimages-2210727739-anotherday18620636_mw2vfms2.jpeg?v=1749418062&w=1920&h=1080";
     
     return (
@@ -19,7 +23,7 @@ export class NewsItem extends Component {
           <img 
             src={urlToImage || defaultImage} 
             className="card-img-top" 
-            alt={title}
+            alt={safeTitle}
             style={{ height: "200px", objectFit: "cover" }}
             onError={(e) => e.target.src = defaultImage}
           />
@@ -30,8 +34,8 @@ export class NewsItem extends Component {
           </div>
         </div>
         <div className="card-body d-flex flex-column">
-          <h5 className="card-title">{title.slice(0, 45)}</h5>
-          <p className="card-text flex-grow-1">{description.slice(0, 85)}...</p>
+          <h5 className="card-title">{safeTitle.slice(0, 45)}</h5>
+          <p className="card-text flex-grow-1">{safeDescription.slice(0, 85)}...</p>
           <p className="card-text">
             <small className="text-muted">
               By {author || "Unknown"} on {new Date(publishedAt).toGMTString()}
