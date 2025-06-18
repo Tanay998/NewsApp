@@ -58,16 +58,19 @@ export default class News extends Component {
   };
 
   async fetchNews() {
+    const apiUrl = import.meta.env.VITE_NEWS_API_URL;
+    const apiKey = import.meta.env.VITE_NEWS_API_KEY;
     const showProgress = !this.props.isInitial || this.state.page>1;
     if(showProgress){
       this.props.setProgress(10); // Start loading bar
     }
     this.setState({ loading: true });
     
-    let url = `https://newsapi.org/v2/everything?q=${this.props.category}&apiKey=d6484692fff743309c2420e629dff1b6&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+    let url = `${apiUrl}/everything?q=${this.props.category}&apiKey=${apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     
     try {
       let data = await fetch(url);
+      console.log(data);
       if(showProgress) this.props.setProgress(50); // Progress after fetch
       let parsedData = await data.json();
       if(showProgress) this.props.setProgress(70); // Progress after parsing
