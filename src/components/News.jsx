@@ -89,7 +89,7 @@ const News = ({ category, pageSize, setProgress, isInitial }) => {
   }, [handleScroll]);
 
   return (
-    <div className="container my-3">
+    <div className="container" style={{marginTop:'100px'}}>
       <h2 className="text-center">NewsApp - {capitalizeFirstLetter(category)} News</h2>
       
       {loading && page === 1 && <Spinner />}
